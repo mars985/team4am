@@ -11,7 +11,7 @@ export default function App() {
       case "join-the-dots":
         return <JoinTheDots rows={8} cols={12}></JoinTheDots>;
       case "strands":
-        return <Strands></Strands>;
+        return <Strands letters={"metamorphosis".split("")} />;
       default:
         return <div className="p-4">Please select a game</div>;
     }
@@ -26,10 +26,7 @@ export default function App() {
         >
           join the dots!
         </button>
-        <button
-          className="btn px-4 py-2"
-          onClick={() => setGame("strands")}
-        >
+        <button className="btn px-4 py-2" onClick={() => setGame("strands")}>
           strands!
         </button>
       </div>
