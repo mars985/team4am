@@ -53,10 +53,8 @@ class DotsEngine extends BaseEngine{
           scored=true
 
         }
-
       }
     }
-
     return scored
   }
 

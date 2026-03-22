@@ -1,13 +1,11 @@
 // Dictionary API service for word validation
 const DICTIONARY_API_URL = "https://api.dictionaryapi.dev/api/v2/entries/en";
 
-// Cache to avoid repeated API calls for same words
 const wordCache = new Map();
 
 export async function isValidWord(word) {
   const wordLower = word.toLowerCase();
   
-  // Check cache first
   if (wordCache.has(wordLower)) {
     return wordCache.get(wordLower);
   }
@@ -16,13 +14,11 @@ export async function isValidWord(word) {
     const response = await fetch(`${DICTIONARY_API_URL}/${wordLower}`);
     const isValid = response.ok;
     
-    // Cache the result
     wordCache.set(wordLower, isValid);
     
     return isValid;
   } catch (error) {
     console.error(`Error validating word "${word}":`, error.message);
-    // Return false on error to be safe
     return false;
   }
 }
@@ -38,7 +34,6 @@ export function getRandomLetters() {
   const extraLettersPool = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   const extraLetters = [];
   
-  // Add 3-5 random extra letters
   const count = 3 + Math.floor(Math.random() * 3);
   for (let i = 0; i < count; i++) {
     extraLetters.push(
