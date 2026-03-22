@@ -6,8 +6,6 @@ export const gamesConfig = {
   },
 
   strands:{
-    baseWord:"REACT",
-    extraLetters:["B","L","S"],
     minWordLength:3,
     pointsPerLetter:10
   }

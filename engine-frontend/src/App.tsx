@@ -9,6 +9,7 @@ import Home from "./pages/Dashboard/Home";
 import Profile from "./pages/Dashboard/Profile";
 import Leaderboard from "./pages/Dashboard/Leaderboard";
 import GamePage from "./pages/game/GamePage";
+import StrandsTest from "./pages/StrandsTest";
 
 import {
   BrowserRouter as Router,
@@ -31,6 +32,7 @@ const App: React.FC = () => {
           <Route path="/profile" element={<Profile />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/game/:id" element={<GamePage />} />
+          <Route path="/strands" element={<StrandsTest />} />
         </Routes>
       </Router>
     </div>
@@ -46,6 +48,6 @@ const Root: React.FC = () => {
   return isAuthenticated ? (
     <Navigate to="/dashboard" />
   ) : (
-    <Navigate to="/login" />
+    <Navigate to="/strands" />
   );
 };
