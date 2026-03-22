@@ -8,6 +8,7 @@ import SignUp from "./pages/Auth/SignUp";
 import Home from "./pages/Dashboard/Home";
 import Profile from "./pages/Dashboard/Profile";
 import Leaderboard from "./pages/Dashboard/Leaderboard";
+import GamePage from "./pages/game/GamePage";
 
 import {
   BrowserRouter as Router,
@@ -29,6 +30,7 @@ const App: React.FC = () => {
           <Route path="/dashboard" element={<Home />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/game/:id" element={<GamePage />} />
         </Routes>
       </Router>
     </div>
