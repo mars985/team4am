@@ -1,7 +1,4 @@
 import React from "react";
-// import CARD_2 from "../../assets/images/card-2.jpeg";
-import mainimg from "../../assets/images/main.png";
-
 import { LuTrendingUpDown } from "react-icons/lu";
 
 interface AuthLayoutProps {

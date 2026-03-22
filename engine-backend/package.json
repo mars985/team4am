@@ -16,6 +16,6 @@
     "express": "^5.2.1",
     "mongoose": "^9.2.3",
     "socket.io": "^4.8.3",
-    "word-list-json": "^0.3.0"
+    "word-list-json": "^0.1.0"
   }
 }

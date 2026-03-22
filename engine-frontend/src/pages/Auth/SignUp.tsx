@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import AuthLayout from "../../components/layouts/AuthLayout";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import Input from "../../components/Inputs/Input";
 import { validateEmail } from "../../utils/helper";
 import ProfilePhotoSelector from "../../components/Inputs/ProfilePhotoSelector";
@@ -12,13 +12,9 @@ const Signup: React.FC = () => {
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
-  const navigate = useNavigate();
-
   // handle sign up form submit
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    let profileImageUrl = "";
 
     if (!fullName) {
       setError("Please enter your name");

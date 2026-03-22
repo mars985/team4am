@@ -1,7 +1,4 @@
-import { useState } from "react";
 import "./App.css";
-import JoinTheDots from "./games/join-the-dots/JoinTheDots";
-import Strands from "./games/strands/Strands";
 
 import Login from "./pages/Auth/Login";
 import SignUp from "./pages/Auth/SignUp";
