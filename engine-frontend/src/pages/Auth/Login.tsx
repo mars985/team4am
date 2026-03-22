@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import AuthLayout from "../../components/layouts/AuthLayout";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import Input from "../../components/Inputs/Input";
 import { validateEmail } from "../../utils/helper";
 
@@ -8,8 +8,6 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
-
-  const navigate = useNavigate();
 
   // handle login form submit
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {

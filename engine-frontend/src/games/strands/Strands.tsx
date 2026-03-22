@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { io, Socket } from "socket.io-client";
 
 type Node = {
@@ -16,7 +16,7 @@ type GameState = {
 };
 
 const NODE_RADIUS = 26;
-const SOCKET_URL = "http://localhost:5000";
+const SOCKET_URL = import.meta.env.VITE_BASE_URL;
 
 export default function CircularStrands() {
   const containerRef = useRef<HTMLDivElement>(null);
