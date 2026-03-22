@@ -1,19 +1,22 @@
 import React from "react";
 import Navbar from "../../components/dashboard/Navbar";
 import GameCard from "../../components/dashboard/GameCard";
+// import i1 from "../../assets/images/joindots.jpeg";
+import i1 from "../../assets/images/joindots.jpeg";
+import i2 from "../../assets/images/strand.jpeg"
 
 const games = [
   {
     id: 1,
     title: "Join The Dots",
     description: "Play classic Connect The Dots with friends.",
-    image: "",
+    image: i1,
   },
   {
     id: 2,
     title: "Strands",
     description: "Brainstorm yourself with beautiful strings.",
-    image: "",
+    image: i2,
   },
 ];
 

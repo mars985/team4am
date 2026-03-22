@@ -17,7 +17,7 @@ const GameCard: React.FC<{ game: Game }> = ({ game }) => {
       <img
         src={game.image}
         alt={game.title}
-        className="w-full h-40 object-cover"
+        className="w-full h-40 object-contain bg-gray-100"
       />
 
 

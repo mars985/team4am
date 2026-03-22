@@ -1,5 +1,7 @@
 import React from "react";
-import CARD_2 from "../../assets/images/card-2.jpeg";
+// import CARD_2 from "../../assets/images/card-2.jpeg";
+import mainimg from "../../assets/images/main.png";
+
 import { LuTrendingUpDown } from "react-icons/lu";
 
 interface AuthLayoutProps {
@@ -29,7 +31,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
         </div>
 
         <img
-          src={CARD_2}
+          src=""
           className="w-64 lg:w-[90%] absolute bottom-10 shadow-lg shadow-blue-400/15"
         />
       </div>
