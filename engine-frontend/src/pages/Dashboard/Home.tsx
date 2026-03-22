@@ -5,13 +5,13 @@ import GameCard from "../../components/dashboard/GameCard";
 const games = [
   {
     id: 1,
-    title: "Connect The Dots",
+    title: "Join The Dots",
     description: "Play classic Connect The Dots with friends.",
     image: "",
   },
   {
     id: 2,
-    title: "String Builder",
+    title: "Strands",
     description: "Brainstorm yourself with beautiful strings.",
     image: "",
   },
