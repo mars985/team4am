@@ -3,35 +3,47 @@ import "./App.css";
 import JoinTheDots from "./games/join-the-dots/JoinTheDots";
 import Strands from "./games/strands/Strands";
 
-export default function App() {
-  const [game, setGame] = useState("none");
+import Login from "./pages/Auth/Login";
+import SignUp from "./pages/Auth/SignUp";
+import Home from "./pages/Dashboard/Home";
+import Profile from "./pages/Dashboard/Profile";
+import Leaderboard from "./pages/Dashboard/Leaderboard";
 
-  const renderGame = () => {
-    switch (game) {
-      case "join-the-dots":
-        return <JoinTheDots rows={8} cols={12}></JoinTheDots>;
-      case "strands":
-        return <Strands letters={"metamorphosis".split("")} />;
-      default:
-        return <div className="p-4">Please select a game</div>;
-    }
-  };
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 
+import React from "react";
+
+const App: React.FC = () => {
   return (
-    <div className="bg-blue-300 w-screen h-screen flex flex-col">
-      <div className="p-4 flex gap-4 border-b border-blue-400">
-        <button
-          className="btn px-4 py-2"
-          onClick={() => setGame("join-the-dots")}
-        >
-          join the dots!
-        </button>
-        <button className="btn px-4 py-2" onClick={() => setGame("strands")}>
-          strands!
-        </button>
-      </div>
-
-      <div className="flex-1 relative">{renderGame()}</div>
+    <div>
+      <Router>
+        <Routes>
+          <Route path="/" element={<Root />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signUp" element={<SignUp />} />
+          <Route path="/dashboard" element={<Home />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/leaderboard" element={<Leaderboard />} />
+        </Routes>
+      </Router>
     </div>
   );
-}
+};
+
+export default App;
+
+const Root: React.FC = () => {
+  // check if token exists in local storage
+  const isAuthenticated = !!localStorage.getItem("token");
+
+  return isAuthenticated ? (
+    <Navigate to="/dashboard" />
+  ) : (
+    <Navigate to="/login" />
+  );
+};
