@@ -29,7 +29,7 @@ const Login: React.FC = () => {
     setError(null);
 
     try {
-      const response = await api.post("/login", {
+      const response = await api.post("/api/auth/login", {
         email,
         password,
       });

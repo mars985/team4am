@@ -1,14 +1,65 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Navbar from "../../components/dashboard/Navbar";
+import api from "../../utils/axios";
+import defaultProfileImage from "../../assets/images/default-image.jpeg";
 
-//backend se actual data jo aayega, wohi daalna h idhr
+interface User {
+  fullName: string;
+  email: string;
+  createdAt: string;
+  profileImageUrl?: string;
+}
+
 const Profile: React.FC = () => {
-  const user = {
-    name: "dummy dummy :) ",
-    email: "heyybaby@example.com",
-    joined: "March 2026",
-    avatar: "",
-  };
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const response = await api.get("/api/auth/getUser");
+        setUser(response.data);
+      } catch (err: any) {
+        setError(err.response?.data?.message || "Failed to load profile");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="max-w-4xl mx-auto px-6 py-10">
+          <div className="bg-white shadow-sm rounded-xl p-6">
+            <div className="text-center">Loading profile...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !user) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="max-w-4xl mx-auto px-6 py-10">
+          <div className="bg-white shadow-sm rounded-xl p-6">
+            <div className="text-center text-red-500">{error || "User not found"}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const joinedDate = new Date(user.createdAt).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -17,17 +68,17 @@ const Profile: React.FC = () => {
         <div className="bg-white shadow-sm rounded-xl p-6">
           <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
             <img
-              src={user.avatar}
+              src={user.profileImageUrl || defaultProfileImage}
               alt="Profile"
               className="w-28 h-28 rounded-full object-cover border"
             />
             <div className="text-center md:text-left">
               <h2 className="text-2xl font-semibold text-gray-800">
-                {user.name}
+                {user.fullName}
               </h2>
               <p className="text-gray-600 mt-1">{user.email}</p>
               <p className="text-xs text-gray-400 mt-2">
-                Joined {user.joined}
+                Joined {joinedDate}
               </p>
             </div>
           </div>
