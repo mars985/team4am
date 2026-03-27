@@ -29,14 +29,12 @@ export default function JoinTheDots() {
   const [isDragging, setIsDragging] = useState(false);
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [playerId] = useState(() => `player_${Math.random().toString(36).substr(2, 9)}`);
-  const [roomId] = useState(() => searchParams.get("room") || `single_${Math.random().toString(36).substr(2, 9)}`);
+  const [roomId] = useState(() => searchParams.get("room") || `dots_${Math.random().toString(36).substr(2, 9)}`);
   const [requestedGridSize] = useState(() => parseInt(searchParams.get("gridSize") || "5"));
   const [playerName] = useState(() => searchParams.get("name") || "Guest");
-  const [gameMode] = useState(() => searchParams.get("mode") || "single");
   const [myPlayerNumber, setMyPlayerNumber] = useState<number | null>(null);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
-  const [timeLeft, setTimeLeft] = useState<number | null>(null);
-  const [gameEnded, setGameEnded] = useState(false);
+  const [opponentLeft, setOpponentLeft] = useState(false);
 
   const selectedEdgeRef = useRef<string | null>(null);
 
@@ -69,16 +67,6 @@ export default function JoinTheDots() {
     socketRef.current.on("game-state", (state: GameState) => {
       console.log("Game state updated:", state);
       setGameState(state);
-      
-      // Start timer in multiplayer mode
-      if (gameMode === "multi" && state && timeLeft === null && !state.gameOver) {
-        setTimeLeft(300); // 5 minutes for dots
-      }
-      
-      // Check if game ended
-      if (state.gameOver) {
-        setGameEnded(true);
-      }
     });
 
     socketRef.current.on("move-error", (error: { message: string }) => {
@@ -86,26 +74,30 @@ export default function JoinTheDots() {
       setTimeout(() => setMessage(null), 2000);
     });
 
+    // Listen for player leaving
+    socketRef.current.on("player-left", ({ playerName, message }) => {
+      setMessage({ text: message, type: "error" });
+      setOpponentLeft(true);
+    });
+
     return () => {
       socketRef.current?.disconnect();
     };
-  }, [playerId, roomId, requestedGridSize, playerName, gameMode]);
+  }, [playerId, roomId, requestedGridSize, playerName]);
 
-  // Timer countdown for multiplayer
+  // Auto-redirect loser to dashboard immediately when game ends
   useEffect(() => {
-    if (gameMode === "multi" && timeLeft !== null && timeLeft > 0 && !gameEnded) {
-      const timer = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev === null || prev <= 1) {
-            setGameEnded(true);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      return () => clearInterval(timer);
+    if (gameState?.gameOver && myPlayerNumber !== null) {
+      const isWinner = gameState.winner === myPlayerNumber || opponentLeft;
+      const isTie = gameState.winner === "tie";
+      
+      // If player lost (not winner and not tie), redirect to dashboard immediately
+      if (!isWinner && !isTie) {
+        socketRef.current?.disconnect();
+        window.location.href = "/dashboard";
+      }
     }
-  }, [timeLeft, gameMode, gameEnded]);
+  }, [gameState?.gameOver, gameState?.winner, myPlayerNumber, opponentLeft]);
 
   const isAdjacent = (id1: number, id2: number) => {
     const r1 = Math.floor(id1 / dotsPerSide), c1 = id1 % dotsPerSide;
@@ -140,7 +132,7 @@ export default function JoinTheDots() {
   };
 
   const handleMouseDown = (index: number) => {
-    if (!gameState || gameState.gameOver || gameEnded) return;
+    if (!gameState || gameState.gameOver) return;
     if (myPlayerNumber !== gameState.currentPlayer) return;
     
     setIsDragging(true);
@@ -159,7 +151,7 @@ export default function JoinTheDots() {
   };
 
   const handleMouseUp = () => {
-    if (!isDragging || gameEnded) return;
+    if (!isDragging) return;
     
     const edge = selectedEdgeRef.current;
     if (edge && gameState) {
@@ -184,6 +176,20 @@ export default function JoinTheDots() {
 
   const handleResetGame = () => {
     socketRef.current?.emit("reset-board", { roomId });
+  };
+
+  const handleBackToDashboard = () => {
+    socketRef.current?.disconnect();
+    window.location.href = "/dashboard";
+  };
+
+  const handleLeaveGame = () => {
+    if (window.confirm("Are you sure you want to leave the game?")) {
+      socketRef.current?.emit("leave-game", { roomId, playerId, playerName });
+      setTimeout(() => {
+        window.location.href = "/dots/lobby";
+      }, 500);
+    }
   };
 
   useEffect(() => {
@@ -222,13 +228,6 @@ export default function JoinTheDots() {
   const getPlayerColor = (playerNum: number) => playerNum === 1 ? "blue" : "red";
   const isMyTurn = myPlayerNumber === gameState.currentPlayer;
 
-  // Format timer
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
   return (
     <div
       className="flex flex-col items-center justify-center flex-1 p-6 select-none"
@@ -244,6 +243,78 @@ export default function JoinTheDots() {
           }`}
         >
           {message.text}
+        </div>
+      )}
+
+      {/* Victory Modal */}
+      {gameState?.gameOver && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-6">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
+            <div className="text-center mb-6">
+              {opponentLeft ? (
+                <>
+                  <div className="text-6xl mb-4">🎉</div>
+                  <h2 className="text-3xl font-bold text-gray-800 mb-2">You Win!</h2>
+                  <p className="text-gray-600">Opponent left the game</p>
+                </>
+              ) : gameState.winner === myPlayerNumber ? (
+                <>
+                  <div className="text-6xl mb-4">🏆</div>
+                  <h2 className="text-3xl font-bold text-gray-800 mb-2">Victory!</h2>
+                  <p className="text-gray-600">You won the game!</p>
+                </>
+              ) : gameState.winner === "tie" ? (
+                <>
+                  <div className="text-6xl mb-4">🤝</div>
+                  <h2 className="text-3xl font-bold text-gray-800 mb-2">It's a Tie!</h2>
+                  <p className="text-gray-600">Great game!</p>
+                </>
+              ) : (
+                <>
+                  <div className="text-6xl mb-4">😔</div>
+                  <h2 className="text-3xl font-bold text-gray-800 mb-2">Game Over</h2>
+                  <p className="text-gray-600">Better luck next time!</p>
+                </>
+              )}
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <h3 className="text-sm font-semibold text-gray-500 mb-3 text-center">FINAL SCORES</h3>
+              <div className="space-y-2">
+                <div className={`flex items-center justify-between px-4 py-2 rounded-lg ${
+                  gameState.winner === 1 ? "bg-blue-50 border-2 border-blue-300" : "bg-white"
+                }`}>
+                  <span className="font-semibold text-gray-800">
+                    🔵 {player1Name} {myPlayerNumber === 1 && "(You)"}
+                  </span>
+                  <span className="text-lg font-bold text-blue-600">{player1Score}</span>
+                </div>
+                <div className={`flex items-center justify-between px-4 py-2 rounded-lg ${
+                  gameState.winner === 2 ? "bg-red-50 border-2 border-red-300" : "bg-white"
+                }`}>
+                  <span className="font-semibold text-gray-800">
+                    🔴 {player2Name} {myPlayerNumber === 2 && "(You)"}
+                  </span>
+                  <span className="text-lg font-bold text-red-600">{player2Score}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleResetGame}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-lg transition-colors"
+              >
+                Play Again
+              </button>
+              <button
+                onClick={handleBackToDashboard}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+              >
+                Dashboard
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -271,56 +342,34 @@ export default function JoinTheDots() {
 
         {/* Center status */}
         <div className="text-center">
-          {gameMode === "multi" && timeLeft !== null && !gameState.gameOver && (
-            <div className="flex flex-col items-center gap-2 mb-3">
-              <div
-                className={`flex items-center justify-center rounded-full text-white text-xl font-bold ${
-                  timeLeft <= 60 ? "animate-pulse" : ""
-                }`}
-                style={{
-                  width: 70,
-                  height: 70,
-                  background: timeLeft <= 60 ? "#EF4444" : "#F59E0B",
-                  border: `3px solid ${timeLeft <= 60 ? "#DC2626" : "#D97706"}`,
-                }}
-              >
-                {formatTime(timeLeft)}
-              </div>
-              <span className="text-xs text-gray-400">time remaining</span>
-            </div>
-          )}
-          
-          {gameState.gameOver || (gameMode === "multi" && gameEnded) ? (
+          {gameState.gameOver ? (
             <div className="flex flex-col items-center gap-2">
               <p className="text-base font-semibold text-gray-700">
-                {gameMode === "multi" && gameEnded && !gameState.gameOver
-                  ? player1Score > player2Score
-                    ? `🔵 ${player1Name} wins!`
-                    : player2Score > player1Score
-                      ? `🔴 ${player2Name} wins!`
-                      : "It's a tie!"
+                {opponentLeft 
+                  ? "🎉 You Win!"
                   : gameState.winner === 1
                     ? `🔵 ${player1Name} wins!`
                     : gameState.winner === 2
                       ? `🔴 ${player2Name} wins!`
                       : "It's a tie!"}
               </p>
-              {gameMode === "single" && (
+              {opponentLeft && (
+                <p className="text-sm text-gray-500">Opponent left the game</p>
+              )}
+              <div className="flex gap-2 mt-2">
                 <button
                   onClick={handleResetGame}
                   className="px-4 py-1.5 text-sm font-medium rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors border border-gray-200"
                 >
                   Play again
                 </button>
-              )}
-              {gameMode === "multi" && (
                 <button
-                  onClick={() => window.location.href = "/dots/lobby"}
+                  onClick={handleBackToDashboard}
                   className="px-4 py-1.5 text-sm font-medium rounded-full bg-blue-100 hover:bg-blue-200 text-blue-700 transition-colors border border-blue-200"
                 >
-                  Back to Lobby
+                  Dashboard
                 </button>
-              )}
+              </div>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-1">
@@ -511,11 +560,21 @@ export default function JoinTheDots() {
       </div>
 
       {/* Instructions */}
-      <p className="mt-4 text-xs text-gray-400">
-        {isMyTurn 
-          ? "Your turn! Drag between dots to draw lines • Complete a box to score"
-          : "Waiting for other player..."}
-      </p>
+      <div className="flex items-center gap-4 mt-4">
+        <p className="text-xs text-gray-400 flex-1 text-center">
+          {isMyTurn 
+            ? "Your turn! Drag between dots to draw lines • Complete a box to score"
+            : "Waiting for other player..."}
+        </p>
+        {!gameState?.gameOver && (
+          <button
+            onClick={handleLeaveGame}
+            className="text-xs text-red-500 hover:text-red-700 font-medium px-3 py-1 border border-red-300 rounded hover:bg-red-50 transition-colors"
+          >
+            Leave Game
+          </button>
+        )}
+      </div>
     </div>
   );
 }

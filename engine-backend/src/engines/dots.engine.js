@@ -112,6 +112,19 @@ class DotsEngine extends BaseEngine{
     this.state.winner = null
   }
 
+  endGamePlayerLeft(leavingPlayerId){
+    // Find the leaving player's number
+    const leavingPlayer = this.state.players[leavingPlayerId]
+    if (!leavingPlayer) return
+    
+    const leavingPlayerNumber = leavingPlayer.playerNumber
+    const remainingPlayerNumber = leavingPlayerNumber === 1 ? 2 : 1
+    
+    // End the game with the remaining player as winner
+    this.state.gameOver = true
+    this.state.winner = remainingPlayerNumber
+  }
+
 }
 
 export default DotsEngine
