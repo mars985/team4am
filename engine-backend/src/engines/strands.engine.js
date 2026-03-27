@@ -16,9 +16,10 @@ class StrandsEngine extends BaseEngine{
     }
   }
 
-  addPlayer(playerId){
+  addPlayer(playerId, playerName){
     if(!this.state.players[playerId]){
       this.state.players[playerId]={
+        name: playerName || "Guest",
         words:[],
         score:0
       }

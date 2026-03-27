@@ -7,6 +7,9 @@ import Profile from "./pages/Dashboard/Profile";
 import Leaderboard from "./pages/Dashboard/Leaderboard";
 import GamePage from "./pages/game/GamePage";
 import StrandsTest from "./pages/StrandsTest";
+import DotsLobby from "./pages/DotsLobby";
+import DotsTest from "./pages/DotsTest";
+import StrandsLobby from "./pages/StrandsLobby";
 
 import {
   BrowserRouter as Router,
@@ -30,6 +33,10 @@ const App: React.FC = () => {
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/game/:id" element={<GamePage />} />
           <Route path="/strands" element={<StrandsTest />} />
+          <Route path="/strands/lobby" element={<StrandsLobby />} />
+          <Route path="/strands/play" element={<StrandsTest />} />
+          <Route path="/dots/lobby" element={<DotsLobby />} />
+          <Route path="/dots/play" element={<DotsTest />} />
         </Routes>
       </Router>
     </div>

@@ -11,6 +11,17 @@ interface Game {
 const GameCard: React.FC<{ game: Game }> = ({ game }) => {
   const navigate = useNavigate();
 
+  const handlePlayClick = () => {
+    // Navigate to lobby for multiplayer games
+    if (game.id === 1) {
+      navigate("/dots/lobby");
+    } else if (game.id === 2) {
+      navigate("/strands/lobby");
+    } else {
+      navigate(`/game/${game.id}`);
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition overflow-hidden">
 
@@ -31,7 +42,7 @@ const GameCard: React.FC<{ game: Game }> = ({ game }) => {
         </p>
 
         <button
-          onClick={() => navigate(`/game/${game.id}`)}
+          onClick={handlePlayClick}
           className="mt-4 w-full bg-primary text-white py-2 rounded-md text-sm hover:opacity-90 transition"
         >
           Play Now

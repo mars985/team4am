@@ -1,7 +1,7 @@
 export const gamesConfig = {
 
   dots:{
-    gridSize:4,
+    gridSize:5,
     players:2
   },
 
