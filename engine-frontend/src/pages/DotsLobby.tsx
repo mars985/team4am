@@ -5,7 +5,6 @@ const DotsLobby: React.FC = () => {
   const [roomCode, setRoomCode] = useState("");
   const [playerName, setPlayerName] = useState("");
   const [gridSize, setGridSize] = useState(5);
-  const [mode, setMode] = useState<"single" | "multi">("multi");
   const [error, setError] = useState("");
   const [generatedCode, setGeneratedCode] = useState("");
   const [showCodeModal, setShowCodeModal] = useState(false);
@@ -28,15 +27,7 @@ const DotsLobby: React.FC = () => {
   };
 
   const handleStartGame = () => {
-    navigate(`/dots/play?room=${generatedCode}&name=${encodeURIComponent(playerName)}&gridSize=${gridSize}&mode=multi`);
-  };
-
-  const handleSinglePlayer = () => {
-    if (!playerName.trim()) {
-      setError("Please enter your name");
-      return;
-    }
-    navigate(`/dots/play?name=${encodeURIComponent(playerName)}&gridSize=${gridSize}&mode=single`);
+    navigate(`/dots/play?room=${generatedCode}&name=${encodeURIComponent(playerName)}&gridSize=${gridSize}`);
   };
 
   const handleCopyCode = () => {
@@ -112,37 +103,6 @@ const DotsLobby: React.FC = () => {
 
         {/* Main Card */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
-          {/* Mode Selection */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Game Mode
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setMode("single")}
-                className={`py-3 px-4 rounded-lg border-2 transition-all ${
-                  mode === "single"
-                    ? "border-blue-500 bg-blue-50 text-blue-700 font-semibold"
-                    : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
-                }`}
-              >
-                <div className="text-2xl mb-1">🎯</div>
-                <div className="text-sm">Single Player</div>
-              </button>
-              <button
-                onClick={() => setMode("multi")}
-                className={`py-3 px-4 rounded-lg border-2 transition-all ${
-                  mode === "multi"
-                    ? "border-blue-500 bg-blue-50 text-blue-700 font-semibold"
-                    : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
-                }`}
-              >
-                <div className="text-2xl mb-1">👥</div>
-                <div className="text-sm">Multiplayer</div>
-              </button>
-            </div>
-          </div>
-
           {/* Player Name Input */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -193,63 +153,48 @@ const DotsLobby: React.FC = () => {
             </div>
           )}
 
-          {/* Single Player Button */}
-          {mode === "single" && (
-            <button
-              onClick={handleSinglePlayer}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors shadow-md hover:shadow-lg"
-            >
-              🎮 Play Solo
-            </button>
-          )}
+          {/* Create Room Button */}
+          <button
+            onClick={handleCreateRoom}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors mb-4 shadow-md hover:shadow-lg"
+          >
+            🎮 Create New Room
+          </button>
 
-          {/* Multiplayer Options */}
-          {mode === "multi" && (
-            <>
-              {/* Create Room Button */}
-              <button
-                onClick={handleCreateRoom}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors mb-4 shadow-md hover:shadow-lg"
-              >
-                🎮 Create New Room
-              </button>
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-white text-gray-500">OR</span>
+            </div>
+          </div>
 
-              {/* Divider */}
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-white text-gray-500">OR</span>
-                </div>
-              </div>
+          {/* Join Room Section */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Room Code
+            </label>
+            <input
+              type="text"
+              value={roomCode}
+              onChange={(e) => {
+                setRoomCode(e.target.value.toUpperCase());
+                setError("");
+              }}
+              placeholder="Enter 6-digit code"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition uppercase"
+              maxLength={6}
+            />
+          </div>
 
-              {/* Join Room Section */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Room Code
-                </label>
-                <input
-                  type="text"
-                  value={roomCode}
-                  onChange={(e) => {
-                    setRoomCode(e.target.value.toUpperCase());
-                    setError("");
-                  }}
-                  placeholder="Enter 6-digit code"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition uppercase"
-                  maxLength={6}
-                />
-              </div>
-
-              <button
-                onClick={handleJoinRoom}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors shadow-md hover:shadow-lg"
-              >
-                🚪 Join Room
-              </button>
-            </>
-          )}
+          <button
+            onClick={handleJoinRoom}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors shadow-md hover:shadow-lg"
+          >
+            🚪 Join Room
+          </button>
         </div>
 
         {/* Instructions */}

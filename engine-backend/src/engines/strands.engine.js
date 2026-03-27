@@ -12,7 +12,10 @@ class StrandsEngine extends BaseEngine{
       board: letterData.allLetters,
       baseWord: letterData.baseWord,
       players:{},
-      foundWords: new Set()
+      foundWords: new Set(),
+      startTime: Date.now(),
+      timeLimit: 180000, // 3 minutes in milliseconds
+      gameEnded: false
     }
   }
 
@@ -27,6 +30,13 @@ class StrandsEngine extends BaseEngine{
   }
 
   async submitWord(playerId, word, selectedIndices){
+    // Check if game has ended
+    const timeElapsed = Date.now() - this.state.startTime
+    if (timeElapsed >= this.state.timeLimit) {
+      this.state.gameEnded = true
+      return { success: false, message: "Time's up!" }
+    }
+
     const wordUpper = word.toUpperCase()
     
     // Check minimum length
@@ -67,11 +77,30 @@ class StrandsEngine extends BaseEngine{
     }
   }
 
+  getTimeRemaining() {
+    const timeElapsed = Date.now() - this.state.startTime
+    const remaining = Math.max(0, Math.floor((this.state.timeLimit - timeElapsed) / 1000))
+    
+    if (remaining === 0 && !this.state.gameEnded) {
+      this.state.gameEnded = true
+    }
+    
+    return remaining
+  }
+
   resetBoard(){
     const letterData = getRandomLetters()
     this.state.board = letterData.allLetters
     this.state.baseWord = letterData.baseWord
     this.state.foundWords.clear()
+    this.state.startTime = Date.now()
+    this.state.gameEnded = false
+    
+    // Reset all players' scores and words
+    Object.keys(this.state.players).forEach(playerId => {
+      this.state.players[playerId].words = []
+      this.state.players[playerId].score = 0
+    })
   }
 
 }

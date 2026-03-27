@@ -1,6 +1,9 @@
 import { createGame, getGame, gameExists } from "../services/gameState.service.js"
 import { updateLeaderboard } from "../services/leaderboard.service.js"
 
+// Store timer intervals for each room
+const roomTimers = {}
+
 export default function registerGameSocket(io) {
 
   io.on("connection", socket => {
@@ -9,16 +12,43 @@ export default function registerGameSocket(io) {
     socket.on("join-game", ({ roomId, type, playerId, gridSize, playerName }) => {
       console.log(`Player ${playerId} joining room ${roomId} for game ${type}`)
 
+      // Store playerId in socket data for disconnect tracking
+      socket.data = { playerId, roomId, type }
+      
       socket.join(roomId)
 
       if (!gameExists(roomId)) {
         createGame(roomId, type, gridSize)
+        
+        // Start timer broadcast for strands games
+        if (type === "strands" && !roomTimers[roomId]) {
+          roomTimers[roomId] = setInterval(() => {
+            const game = getGame(roomId)
+            if (game && game.type === "strands") {
+              const timeRemaining = game.engine.getTimeRemaining()
+              const state = game.engine.getState()
+              state.timeRemaining = timeRemaining
+              state.gameEnded = game.engine.state.gameEnded
+              
+              io.to(roomId).emit("timer-update", { timeRemaining, gameEnded: state.gameEnded })
+              
+              // Stop timer if game ended
+              if (state.gameEnded && roomTimers[roomId]) {
+                clearInterval(roomTimers[roomId])
+                delete roomTimers[roomId]
+              }
+            }
+          }, 1000) // Update every second
+        }
       }
 
       const game = getGame(roomId)
 
       if (type === "strands") {
-        game.engine.addPlayer(playerId, playerName)
+        // Check if player already exists
+        if (!game.engine.state.players[playerId]) {
+          game.engine.addPlayer(playerId, playerName)
+        }
       }
 
       if (type === "dots") {
@@ -44,7 +74,15 @@ export default function registerGameSocket(io) {
         }
       }
 
-      io.to(roomId).emit("game-state", game.engine.getState())
+      const state = game.engine.getState()
+      
+      // Add time remaining for strands
+      if (type === "strands") {
+        state.timeRemaining = game.engine.getTimeRemaining()
+        state.gameEnded = game.engine.state.gameEnded
+      }
+      
+      io.to(roomId).emit("game-state", state)
     })
 
     socket.on("player-move", async ({ roomId, data }) => {
@@ -92,7 +130,11 @@ export default function registerGameSocket(io) {
           updateLeaderboard(game.type, data.playerId, player.score)
         }
 
-        io.to(roomId).emit("game-state", game.engine.getState())
+        // Send updated state with time remaining
+        const state = game.engine.getState()
+        state.timeRemaining = game.engine.getTimeRemaining()
+        state.gameEnded = game.engine.state.gameEnded
+        io.to(roomId).emit("game-state", state)
       }
     })
 
@@ -101,7 +143,34 @@ export default function registerGameSocket(io) {
       
       if (game && game.type === "strands") {
         game.engine.resetBoard()
-        io.to(roomId).emit("game-state", game.engine.getState())
+        
+        // Restart timer for strands
+        if (roomTimers[roomId]) {
+          clearInterval(roomTimers[roomId])
+        }
+        
+        roomTimers[roomId] = setInterval(() => {
+          const game = getGame(roomId)
+          if (game && game.type === "strands") {
+            const timeRemaining = game.engine.getTimeRemaining()
+            const state = game.engine.getState()
+            state.timeRemaining = timeRemaining
+            state.gameEnded = game.engine.state.gameEnded
+            
+            io.to(roomId).emit("timer-update", { timeRemaining, gameEnded: state.gameEnded })
+            
+            // Stop timer if game ended
+            if (state.gameEnded && roomTimers[roomId]) {
+              clearInterval(roomTimers[roomId])
+              delete roomTimers[roomId]
+            }
+          }
+        }, 1000)
+        
+        const state = game.engine.getState()
+        state.timeRemaining = game.engine.getTimeRemaining()
+        state.gameEnded = game.engine.state.gameEnded
+        io.to(roomId).emit("game-state", state)
       }
 
       if (game && game.type === "dots") {
@@ -110,8 +179,75 @@ export default function registerGameSocket(io) {
       }
     })
 
+    socket.on("leave-game", ({ roomId, playerId, playerName }) => {
+      console.log(`Player ${playerId} leaving room ${roomId}`)
+      
+      const game = getGame(roomId)
+      if (game && Object.keys(game.engine.state.players).length > 1) {
+        // End the game if it's Join the Dots
+        if (game.type === "dots" && !game.engine.state.gameOver) {
+          game.engine.endGamePlayerLeft(playerId)
+        }
+        
+        // Notify other players
+        socket.to(roomId).emit("player-left", {
+          playerId,
+          playerName: playerName || "Player",
+          message: `${playerName || "Player"} left the game`
+        })
+        
+        // Send updated game state for dots
+        if (game.type === "dots") {
+          socket.to(roomId).emit("game-state", game.engine.getState())
+        }
+      }
+      
+      // Leave the room
+      socket.leave(roomId)
+    })
+
     socket.on("disconnect", () => {
       console.log("Client disconnected:", socket.id)
+      
+      // Find which rooms this socket was in and notify other players
+      const rooms = Array.from(socket.rooms).filter(room => room !== socket.id)
+      
+      rooms.forEach(roomId => {
+        const game = getGame(roomId)
+        if (game) {
+          // Find the disconnected player
+          let disconnectedPlayerId = null
+          let disconnectedPlayerName = null
+          
+          for (const [pid, player] of Object.entries(game.engine.state.players)) {
+            // Check if this player's socket disconnected
+            if (socket.data?.playerId === pid) {
+              disconnectedPlayerId = pid
+              disconnectedPlayerName = player.name || "Player"
+              break
+            }
+          }
+          
+          // Notify remaining players and end game if needed
+          if (disconnectedPlayerId && Object.keys(game.engine.state.players).length > 1) {
+            // End the game if it's Join the Dots
+            if (game.type === "dots" && !game.engine.state.gameOver) {
+              game.engine.endGamePlayerLeft(disconnectedPlayerId)
+            }
+            
+            socket.to(roomId).emit("player-left", {
+              playerId: disconnectedPlayerId,
+              playerName: disconnectedPlayerName,
+              message: `${disconnectedPlayerName} left the game`
+            })
+            
+            // Send updated game state for dots
+            if (game.type === "dots") {
+              io.to(roomId).emit("game-state", game.engine.getState())
+            }
+          }
+        }
+      })
     })
   })
 

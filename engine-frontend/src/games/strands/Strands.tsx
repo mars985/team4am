@@ -14,6 +14,8 @@ type GameState = {
   baseWord: string;
   players: Record<string, { name: string; words: string[]; score: number }>;
   foundWords: string[];
+  timeRemaining?: number;
+  gameEnded?: boolean;
 };
 
 const NODE_RADIUS = 26;
@@ -27,14 +29,51 @@ export default function CircularStrands() {
   const [isDragging, setIsDragging] = useState(false);
   const [path, setPath] = useState<Node[]>([]);
   const [gameState, setGameState] = useState<GameState | null>(null);
-  const [playerId] = useState(() => `player_${Math.random().toString(36).substr(2, 9)}`);
-  const [roomId] = useState(() => searchParams.get("room") || `single_${Math.random().toString(36).substr(2, 9)}`);
+  const [playerId] = useState(() => {
+    // Create consistent playerId based on room and name to prevent duplicates on refresh
+    const room = searchParams.get("room") || `single_${Date.now()}`;
+    const name = searchParams.get("name") || "Guest";
+    return `${room}_${name}`.replace(/[^a-zA-Z0-9_]/g, '_');
+  });
+  const [roomId] = useState(() => {
+    const room = searchParams.get("room");
+    const mode = searchParams.get("mode") || "single";
+    const name = searchParams.get("name") || "Guest";
+    
+    // For single player, create a consistent room ID based on player name
+    // Store it in sessionStorage so it persists across refreshes
+    if (mode === "single") {
+      const storageKey = `strands_single_room_${name}`;
+      let singleRoom = sessionStorage.getItem(storageKey);
+      if (!singleRoom) {
+        singleRoom = `single_${name}_${Date.now()}`.replace(/[^a-zA-Z0-9_]/g, '_');
+        sessionStorage.setItem(storageKey, singleRoom);
+      }
+      return singleRoom;
+    }
+    
+    return room || `multi_${Math.random().toString(36).substr(2, 9)}`;
+  });
   const [playerName] = useState(() => searchParams.get("name") || "Guest");
   const [gameMode] = useState(() => searchParams.get("mode") || "single");
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [gameEnded, setGameEnded] = useState(false);
+  const [opponentLeft, setOpponentLeft] = useState(false);
   const visited = useRef<Set<number>>(new Set());
+
+  // Auto-redirect loser to dashboard immediately when game ends (multiplayer only)
+  useEffect(() => {
+    if (gameEnded && gameMode === "multi" && gameState) {
+      const winner = getWinner();
+      
+      // If player lost (not winner and not tie and opponent didn't leave), redirect to dashboard immediately
+      if (winner && !winner.isTie && !winner.isYou && !opponentLeft) {
+        socketRef.current?.disconnect();
+        window.location.href = "/dashboard";
+      }
+    }
+  }, [gameEnded, gameMode, gameState, opponentLeft]);
 
   // Socket.IO connection
   useEffect(() => {
@@ -54,9 +93,34 @@ export default function CircularStrands() {
       console.log("Game state updated:", state);
       setGameState(state);
       
-      // Start timer in multiplayer mode
-      if (gameMode === "multi" && state && timeLeft === null) {
-        setTimeLeft(180); // 3 minutes
+      // Update timer from backend (works for both single and multiplayer)
+      if (state.timeRemaining !== undefined) {
+        setTimeLeft(state.timeRemaining);
+      }
+      
+      // Check if game ended
+      if (state.gameEnded) {
+        setGameEnded(true);
+      }
+    });
+
+    // Listen for continuous timer updates
+    socketRef.current.on("timer-update", ({ timeRemaining, gameEnded }) => {
+      setTimeLeft(timeRemaining);
+      if (gameEnded) {
+        setGameEnded(true);
+      }
+    });
+
+    // Listen for player leaving
+    socketRef.current.on("player-left", ({ playerName, message }) => {
+      if (gameMode === "multi") {
+        setMessage({ text: message, type: "error" });
+        setOpponentLeft(true);
+        // Show victory after a delay
+        setTimeout(() => {
+          setGameEnded(true);
+        }, 1500);
       }
     });
 
@@ -73,22 +137,6 @@ export default function CircularStrands() {
       socketRef.current?.disconnect();
     };
   }, [playerId, roomId, playerName, gameMode]);
-
-  // Timer countdown for multiplayer
-  useEffect(() => {
-    if (gameMode === "multi" && timeLeft !== null && timeLeft > 0 && !gameEnded) {
-      const timer = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev === null || prev <= 1) {
-            setGameEnded(true);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      return () => clearInterval(timer);
-    }
-  }, [timeLeft, gameMode, gameEnded]);
 
   const radius = Math.min(size.width, size.height) * 0.36;
 
@@ -161,6 +209,26 @@ export default function CircularStrands() {
 
   const handleResetBoard = () => {
     socketRef.current?.emit("reset-board", { roomId });
+    setGameEnded(false);
+    setOpponentLeft(false);
+  };
+
+  const handleBackToDashboard = () => {
+    socketRef.current?.disconnect();
+    // Clear session storage for single player to allow new game
+    if (gameMode === "single") {
+      sessionStorage.removeItem(`strands_single_room_${playerName}`);
+    }
+    window.location.href = "/dashboard";
+  };
+
+  const handleLeaveGame = () => {
+    if (window.confirm("Are you sure you want to leave the game?")) {
+      socketRef.current?.emit("leave-game", { roomId, playerId, playerName });
+      setTimeout(() => {
+        window.location.href = "/strands/lobby";
+      }, 500);
+    }
   };
 
   const currentWord = path.map((n) => n.letter).join("");
@@ -225,12 +293,32 @@ export default function CircularStrands() {
       )}
 
       {/* Game Over Modal */}
-      {gameMode === "multi" && gameEnded && (
+      {gameEnded && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-6">
           <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
-            <h2 className="text-3xl font-bold text-gray-800 mb-4 text-center">Time's Up!</h2>
+            <div className="text-center mb-6">
+              {opponentLeft ? (
+                <>
+                  <div className="text-6xl mb-4">🎉</div>
+                  <h2 className="text-3xl font-bold text-gray-800 mb-2">You Win!</h2>
+                  <p className="text-gray-600">Opponent left the game</p>
+                </>
+              ) : timeLeft === 0 ? (
+                <>
+                  <div className="text-6xl mb-4">⏰</div>
+                  <h2 className="text-3xl font-bold text-gray-800 mb-2">Time's Up!</h2>
+                  <p className="text-gray-600">Game Over</p>
+                </>
+              ) : (
+                <>
+                  <div className="text-6xl mb-4">🎮</div>
+                  <h2 className="text-3xl font-bold text-gray-800 mb-2">Game Over!</h2>
+                  <p className="text-gray-600">Well played!</p>
+                </>
+              )}
+            </div>
             
-            {(() => {
+            {gameMode === "multi" && !opponentLeft && (() => {
               const winner = getWinner();
               return winner ? (
                 <div className="mb-6 text-center">
@@ -245,38 +333,51 @@ export default function CircularStrands() {
               ) : null;
             })()}
 
-            <div className="mb-6 bg-gray-50 rounded-lg p-4">
-              <h3 className="text-sm font-semibold text-gray-500 mb-3 text-center">FINAL SCORES</h3>
-              <div className="space-y-2">
-                {gameState && Object.entries(gameState.players)
-                  .sort(([, a], [, b]) => b.score - a.score)
-                  .map(([pid, player], index) => (
-                    <div
-                      key={pid}
-                      className={`flex items-center justify-between px-4 py-2 rounded-lg ${
-                        index === 0 ? "bg-yellow-50 border-2 border-yellow-300" : "bg-white"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        {index === 0 && <span className="text-xl">🏆</span>}
-                        <span className="font-semibold text-gray-800">
-                          {player.name} {pid === playerId && "(You)"}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm text-gray-500">{player.words.length} words</span>
-                        <span className="text-lg font-bold text-purple-600">{player.score}</span>
-                      </div>
-                    </div>
-                  ))}
+            {gameMode === "single" && (
+              <div className="mb-6 text-center">
+                <p className="text-xl font-semibold text-gray-700">
+                  Final Score: {score} points
+                </p>
+                <p className="text-sm text-gray-500 mt-2">
+                  {completedWords.length} words found
+                </p>
               </div>
-            </div>
+            )}
+
+            {gameMode === "multi" && gameState && (
+              <div className="mb-6 bg-gray-50 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-gray-500 mb-3 text-center">FINAL SCORES</h3>
+                <div className="space-y-2">
+                  {Object.entries(gameState.players)
+                    .sort(([, a], [, b]) => b.score - a.score)
+                    .map(([pid, player], index) => (
+                      <div
+                        key={pid}
+                        className={`flex items-center justify-between px-4 py-2 rounded-lg ${
+                          index === 0 ? "bg-yellow-50 border-2 border-yellow-300" : "bg-white"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          {index === 0 && <span className="text-xl">🏆</span>}
+                          <span className="font-semibold text-gray-800">
+                            {player.name} {pid === playerId && "(You)"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm text-gray-500">{player.words.length} words</span>
+                          <span className="text-lg font-bold text-purple-600">{player.score}</span>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
 
             <button
-              onClick={() => window.location.href = "/strands/lobby"}
+              onClick={handleBackToDashboard}
               className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
             >
-              Back to Lobby
+              {gameMode === "single" ? "Play Again" : "Dashboard"}
             </button>
           </div>
         </div>
@@ -343,38 +444,35 @@ export default function CircularStrands() {
             <span className="text-xs text-gray-600 font-medium">words</span>
           </div>
 
-          {/* Score display or Timer */}
+          {/* Timer - Show for both modes */}
+          {timeLeft !== null && (
+            <div className="flex flex-col items-center gap-1">
+              <div
+                className={`flex items-center justify-center rounded-full text-white text-lg font-bold ${
+                  timeLeft <= 30 ? "animate-pulse" : ""
+                }`}
+                style={{
+                  width: 60,
+                  height: 60,
+                  background: timeLeft <= 30 ? "#EF4444" : "#F59E0B",
+                  border: `2px solid ${timeLeft <= 30 ? "#DC2626" : "#D97706"}`,
+                }}
+              >
+                {formatTime(timeLeft)}
+              </div>
+              <span className="text-xs text-gray-600 font-medium">time left</span>
+            </div>
+          )}
+
+          {/* Score */}
           <div className="flex flex-col items-center gap-1">
-            {gameMode === "multi" && timeLeft !== null ? (
-              <>
-                <div
-                  className={`flex items-center justify-center rounded-full text-white text-lg font-bold ${
-                    timeLeft <= 30 ? "animate-pulse" : ""
-                  }`}
-                  style={{
-                    width: 60,
-                    height: 60,
-                    background: timeLeft <= 30 ? "#EF4444" : "#F59E0B",
-                    border: `2px solid ${timeLeft <= 30 ? "#DC2626" : "#D97706"}`,
-                  }}
-                >
-                  {formatTime(timeLeft)}
-                </div>
-                <span className="text-xs text-gray-600 font-medium">time left</span>
-              </>
-            ) : (
-              <>
-                <div
-                  className="flex items-center justify-center rounded-full text-white text-lg font-bold"
-                  style={{ width: 50, height: 50, background: "#10B981", border: "2px solid #059669" }}
-                >
-                  {score}
-                </div>
-                <span className="text-xs text-gray-600 font-medium">
-                  {gameMode === "multi" ? "your score" : "score"}
-                </span>
-              </>
-            )}
+            <div
+              className="flex items-center justify-center rounded-full text-white text-sm font-bold"
+              style={{ width: 40, height: 40, background: "#10B981", border: "2px solid #059669" }}
+            >
+              {score}
+            </div>
+            <span className="text-xs text-gray-600 font-medium">score</span>
           </div>
 
           {/* Reset board - Only in single player */}
@@ -391,19 +489,6 @@ export default function CircularStrands() {
               </div>
               <span className="text-xs text-gray-500 group-hover:text-gray-600">new</span>
             </button>
-          )}
-          
-          {/* Score in multiplayer (when timer is showing) */}
-          {gameMode === "multi" && timeLeft !== null && (
-            <div className="flex flex-col items-center gap-1">
-              <div
-                className="flex items-center justify-center rounded-full text-white text-sm font-bold"
-                style={{ width: 40, height: 40, background: "#10B981", border: "2px solid #059669" }}
-              >
-                {score}
-              </div>
-              <span className="text-xs text-gray-600 font-medium">score</span>
-            </div>
           )}
         </div>
       </div>
@@ -524,9 +609,19 @@ export default function CircularStrands() {
       )}
 
       {/* Instructions */}
-      <p className="mt-4 text-xs text-gray-400">
-        Drag across letters to spell words • 3+ letters minimum
-      </p>
+      <div className="flex items-center gap-4 mt-4">
+        <p className="text-xs text-gray-400 flex-1 text-center">
+          Drag across letters to spell words • 3+ letters minimum
+        </p>
+        {gameMode === "multi" && !gameEnded && (
+          <button
+            onClick={handleLeaveGame}
+            className="text-xs text-red-500 hover:text-red-700 font-medium px-3 py-1 border border-red-300 rounded hover:bg-red-50 transition-colors"
+          >
+            Leave Game
+          </button>
+        )}
+      </div>
     </div>
   );
 }
