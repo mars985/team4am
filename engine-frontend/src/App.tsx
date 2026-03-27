@@ -52,6 +52,6 @@ const Root: React.FC = () => {
   return isAuthenticated ? (
     <Navigate to="/dashboard" />
   ) : (
-    <Navigate to="/strands" />
+    <Navigate to="/login" />
   );
 };

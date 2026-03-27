@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 import Input from "../../components/Inputs/Input";
 import { validateEmail } from "../../utils/helper";
 import ProfilePhotoSelector from "../../components/Inputs/ProfilePhotoSelector";
+import api from "../../utils/axios";
+import { useNavigate } from "react-router-dom";
 
 const Signup: React.FC = () => {
   const [profilePic, setProfilePic] = useState<File | null>(null);
@@ -11,6 +13,7 @@ const Signup: React.FC = () => {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   // handle sign up form submit
   const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -33,7 +36,25 @@ const Signup: React.FC = () => {
 
     setError("");
 
-    // SignUp API Call
+    try {
+      const response = await api.post("/register", {
+        fullName,
+        email,
+        password,
+      });
+
+      const { token, user } = response.data;
+
+      // store auth data
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
+
+      // redirect
+      navigate("/dashboard"); // change route if needed
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Signup failed");
+    }
   };
 
   return (

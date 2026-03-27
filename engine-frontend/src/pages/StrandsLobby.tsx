@@ -27,7 +27,9 @@ const StrandsLobby: React.FC = () => {
   };
 
   const handleStartGame = () => {
-    navigate(`/strands/play?room=${generatedCode}&name=${encodeURIComponent(playerName)}&mode=multi`);
+    navigate(
+      `/strands/play?room=${generatedCode}&name=${encodeURIComponent(playerName)}&mode=multi`,
+    );
   };
 
   const handleSinglePlayer = () => {
@@ -35,7 +37,9 @@ const StrandsLobby: React.FC = () => {
       setError("Please enter your name");
       return;
     }
-    navigate(`/strands/play?name=${encodeURIComponent(playerName)}&mode=single`);
+    navigate(
+      `/strands/play?name=${encodeURIComponent(playerName)}&mode=single`,
+    );
   };
 
   const handleCopyCode = () => {
@@ -54,7 +58,9 @@ const StrandsLobby: React.FC = () => {
       return;
     }
 
-    navigate(`/strands/play?room=${roomCode.toUpperCase()}&name=${encodeURIComponent(playerName)}&mode=multi`);
+    navigate(
+      `/strands/play?room=${roomCode.toUpperCase()}&name=${encodeURIComponent(playerName)}&mode=multi`,
+    );
   };
 
   return (
@@ -70,12 +76,18 @@ const StrandsLobby: React.FC = () => {
         {showCodeModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-6">
             <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center">Room Created!</h2>
-              
+              <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center">
+                Room Created!
+              </h2>
+
               <div className="mb-6">
-                <p className="text-sm text-gray-600 mb-3 text-center">Share this code with your friends:</p>
+                <p className="text-sm text-gray-600 mb-3 text-center">
+                  Share this code with your friends:
+                </p>
                 <div className="bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-300 rounded-lg p-4 text-center">
-                  <p className="text-4xl font-bold text-purple-600 tracking-widest">{generatedCode}</p>
+                  <p className="text-4xl font-bold text-purple-600 tracking-widest">
+                    {generatedCode}
+                  </p>
                 </div>
               </div>
 

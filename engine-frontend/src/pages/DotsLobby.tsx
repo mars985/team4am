@@ -28,7 +28,9 @@ const DotsLobby: React.FC = () => {
   };
 
   const handleStartGame = () => {
-    navigate(`/dots/play?room=${generatedCode}&name=${encodeURIComponent(playerName)}&gridSize=${gridSize}&mode=multi`);
+    navigate(
+      `/dots/play?room=${generatedCode}&name=${encodeURIComponent(playerName)}&gridSize=${gridSize}&mode=multi`,
+    );
   };
 
   const handleSinglePlayer = () => {
@@ -36,7 +38,9 @@ const DotsLobby: React.FC = () => {
       setError("Please enter your name");
       return;
     }
-    navigate(`/dots/play?name=${encodeURIComponent(playerName)}&gridSize=${gridSize}&mode=single`);
+    navigate(
+      `/dots/play?name=${encodeURIComponent(playerName)}&gridSize=${gridSize}&mode=single`,
+    );
   };
 
   const handleCopyCode = () => {
@@ -55,7 +59,9 @@ const DotsLobby: React.FC = () => {
       return;
     }
 
-    navigate(`/dots/play?room=${roomCode.toUpperCase()}&name=${encodeURIComponent(playerName)}`);
+    navigate(
+      `/dots/play?room=${roomCode.toUpperCase()}&name=${encodeURIComponent(playerName)}`,
+    );
   };
 
   return (
@@ -63,7 +69,9 @@ const DotsLobby: React.FC = () => {
       <div className="max-w-md w-full">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">Join The Dots</h1>
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">
+            Join The Dots
+          </h1>
           <p className="text-gray-600">Multiplayer Strategy Game</p>
         </div>
 
@@ -71,18 +79,26 @@ const DotsLobby: React.FC = () => {
         {showCodeModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-6">
             <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center">Room Created!</h2>
-              
+              <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center">
+                Room Created!
+              </h2>
+
               <div className="mb-6">
-                <p className="text-sm text-gray-600 mb-3 text-center">Share this code with your friend:</p>
+                <p className="text-sm text-gray-600 mb-3 text-center">
+                  Share this code with your friend:
+                </p>
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg p-4 text-center">
-                  <p className="text-4xl font-bold text-blue-600 tracking-widest">{generatedCode}</p>
+                  <p className="text-4xl font-bold text-blue-600 tracking-widest">
+                    {generatedCode}
+                  </p>
                 </div>
               </div>
 
               <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                 <p className="text-xs text-gray-600 mb-1">Game Settings:</p>
-                <p className="text-sm font-semibold text-gray-800">Grid Size: {gridSize}x{gridSize} ({gridSize * gridSize} boxes)</p>
+                <p className="text-sm font-semibold text-gray-800">
+                  Grid Size: {gridSize}x{gridSize} ({gridSize * gridSize} boxes)
+                </p>
               </div>
 
               <div className="flex gap-3">
